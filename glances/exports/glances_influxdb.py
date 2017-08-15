@@ -20,6 +20,7 @@
 """InfluxDB interface class."""
 
 import sys
+import pprint
 
 from glances.logger import logger
 from glances.exports.glances_export import GlancesExport
@@ -117,11 +118,65 @@ class Export(GlancesExport):
                 except (TypeError, ValueError) as e:
                     logger.debug("InfluxDB error during stat convertion %s=%s (%s)" % (columns[i], points[i], e))
 
-            data = [{'measurement': name,
-                     'tags': self.parse_tags(self.tags),
-                     'fields': dict(zip(columns, points))}]
+            #data = [{'measurement': name,
+            #         'tags': self.parse_tags(self.tags),
+            #         'fields': dict(zip(columns, points))}]
+            pp = pprint.PrettyPrinter()
+            # If the metric name has a "." in it
+            if any("." in s for s in columns): 
+                print "Found composite metric name\n";
+                distinctdata={}
+                data = dict(zip(columns, points))
+
+                # Get a list of each metric prefix
+                for x in columns:
+                  keyarray = x.split(".")
+                  #print "AAA: " + x + keyarray[0] + ":" +  keyarray[1]
+                  distinctdata[keyarray[0]]=1
+
+                # Foreach prefix 
+                for prefix in distinctdata:
+                  newcolumns=[]
+                  newpoints=[]
+                  
+                  # Scan for metrics with this prefix
+                  for x in columns:
+                    if (prefix + ".") in x:
+                      keyarray = x.split(".")
+                      # Add key without prefix and value to new data structure
+                      newcolumns.append(keyarray[1])
+                      newpoints.append(data[x]) 
+
+                  newtags=self.tags
+                  if any("lo.history_size" in s for s in columns): 
+                    print "Found a network"
+                    newtags+=',interface:' + prefix
+                  elif any("iocumulative_iow" in s for s in columns): 
+                    print "Found Docker\n";
+
+                  # Create a new data object to load
+                  influxdata = [{'measurement': name, 'tags': self.parse_tags(newtags), 'fields': dict(zip(newcolumns, newpoints))}]
+                  #pp.pprint(influxdata)
+
+                  #Load object
+                  try:
+                    self.client.write_points(influxdata)
+                  except Exception as e:
+                    logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
+
+            if any("0.steal" in s for s in columns): 
+                print "Found CPU\n";
+            elif any("fs_critical" in s for s in columns): 
+                print "Found Filesystem\n";
+            elif any("diskio_hide" in s for s in columns): 
+                print "Found Disk\n";
+            elif any("sensors_battery_critical" in s for s in columns): 
+                print "Found Sensor\n";
+            print "--------------"
+            #pp.pprint(points)
+            #sys.exit()
         # Write input to the InfluxDB database
         try:
-            self.client.write_points(data)
+            self.client.write_points(influxdata)
         except Exception as e:
             logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
