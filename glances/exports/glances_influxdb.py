@@ -124,7 +124,7 @@ class Export(GlancesExport):
             pp = pprint.PrettyPrinter()
             # If the metric name has a "." in it
             if any("." in s for s in columns): 
-                print "Found composite metric name\n";
+                #print "Found composite metric name\n";
                 distinctdata={}
                 data = dict(zip(columns, points))
 
@@ -149,10 +149,23 @@ class Export(GlancesExport):
 
                   newtags=self.tags
                   if any("lo.history_size" in s for s in columns): 
-                    print "Found a network"
+                    #print "Found a network: " + prefix
                     newtags+=',interface:' + prefix
                   elif any("iocumulative_iow" in s for s in columns): 
-                    print "Found Docker\n";
+                    #print "Found Docker: " + prefix
+                    newtags+=',container:' + prefix
+                  elif any("0.steal" in s for s in columns): 
+                    #print "Found CPU: " + prefix
+                    newtags+=',cpu:' + prefix
+                  elif any("fs_critical" in s for s in columns): 
+                    #print "Found Filesystem: " + prefix
+                    newtags+=',filesystem:' + prefix
+                  elif any("diskio_hide" in s for s in columns): 
+                    #print "Found Disk: " + prefix
+                    newtags+=',disk:' + prefix
+                  elif any("sensors_battery_critical" in s for s in columns): 
+                    #print "Found Sensor: " + prefix
+                    newtags+=',sensor:' + prefix
 
                   # Create a new data object to load
                   influxdata = [{'measurement': name, 'tags': self.parse_tags(newtags), 'fields': dict(zip(newcolumns, newpoints))}]
@@ -164,19 +177,8 @@ class Export(GlancesExport):
                   except Exception as e:
                     logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
 
-            if any("0.steal" in s for s in columns): 
-                print "Found CPU\n";
-            elif any("fs_critical" in s for s in columns): 
-                print "Found Filesystem\n";
-            elif any("diskio_hide" in s for s in columns): 
-                print "Found Disk\n";
-            elif any("sensors_battery_critical" in s for s in columns): 
-                print "Found Sensor\n";
-            print "--------------"
-            #pp.pprint(points)
-            #sys.exit()
         # Write input to the InfluxDB database
-        try:
-            self.client.write_points(influxdata)
-        except Exception as e:
-            logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
+        #try:
+        #    self.client.write_points(influxdata)
+        #except Exception as e:
+        #    logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
