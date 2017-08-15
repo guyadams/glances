@@ -166,6 +166,8 @@ class Export(GlancesExport):
                   elif any("sensors_battery_critical" in s for s in columns): 
                     #print "Found Sensor: " + prefix
                     newtags+=',sensor:' + prefix
+                  else:
+                    logger.error("Found composite key that isn't handled: " + prefix)
 
                   # Create a new data object to load
                   influxdata = [{'measurement': name, 'tags': self.parse_tags(newtags), 'fields': dict(zip(newcolumns, newpoints))}]
