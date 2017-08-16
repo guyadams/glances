@@ -118,10 +118,8 @@ class Export(GlancesExport):
                 except (TypeError, ValueError) as e:
                     logger.debug("InfluxDB error during stat convertion %s=%s (%s)" % (columns[i], points[i], e))
 
-            #data = [{'measurement': name,
-            #         'tags': self.parse_tags(self.tags),
-            #         'fields': dict(zip(columns, points))}]
             pp = pprint.PrettyPrinter()
+
             # If the metric name has a "." in it
             if any("." in s for s in columns): 
                 #print "Found composite metric name\n";
@@ -178,9 +176,15 @@ class Export(GlancesExport):
                     self.client.write_points(influxdata)
                   except Exception as e:
                     logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
-
-        # Write input to the InfluxDB database
-        #try:
-        #    self.client.write_points(influxdata)
-        #except Exception as e:
-        #    logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
+             
+            # It's a non composite metric
+            else: 
+              data = [{'measurement': name,
+                       'tags': self.parse_tags(self.tags),
+                       'fields': dict(zip(columns, points))}]
+              #pp.pprint(data)
+              # Write input to the InfluxDB database
+              try:
+                  self.client.write_points(data)
+              except Exception as e:
+                  logger.error("Cannot export {} stats to InfluxDB ({})".format(name, e))
